@@ -1,0 +1,7 @@
+{
+  "name": "WonderTales: Interactive Storybook",
+  "description": "A magical, interactive storybook for children where they guide the adventure with their voice.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
