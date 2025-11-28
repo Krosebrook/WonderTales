@@ -1,3 +1,15 @@
+/**
+ * WonderTales Application Entry Point
+ * 
+ * This is the root component that sets up the StoryProvider context and manages 
+ * the high-level view switching between the SetupWizard and the main StoryView.
+ * 
+ * Flow:
+ * 1. User starts at SetupWizard (status: 'setup').
+ * 2. Upon generation, SetupWizard calls handleWizardComplete.
+ * 3. Context updates profile and triggers startStory().
+ * 4. View switches to StoryView (status: 'loading' -> 'reading').
+ */
 
 import React from 'react';
 import { StoryProvider, useStory } from './contexts/StoryContext';

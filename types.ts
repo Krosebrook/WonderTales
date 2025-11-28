@@ -4,15 +4,18 @@ export interface ScriptLine {
   text: string;
 }
 
-export interface StoryPage {
-  pageNumber: number;
+export interface ScriptResponse {
   title: string;
   lines: ScriptLine[];
-  choices: string[];
   imagePrompt: string;
+  choices: string[];
+  soundCue: string;
+  ambientSound: string;
+}
+
+export interface StoryPage extends ScriptResponse {
+  pageNumber: number;
   imageUrl?: string;
-  soundCue?: string; // Visual badge text
-  ambientSound?: string; // Description for audio generator
   ambientAudioData?: string; // Base64 encoded audio
 }
 
@@ -36,4 +39,28 @@ export interface StoryContextType extends StoryState {
   setProfile: (profile: UserProfile) => void;
   startStory: () => Promise<void>;
   makeChoice: (choice: string, audioInput?: string) => Promise<void>;
+}
+
+export type ThemeCategory = "space" | "fantasy" | "animals" | "vehicles" | "mixed";
+
+export interface ThemePreset {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+  category: ThemeCategory;
+}
+
+export interface PagePreset {
+  id: string;
+  label: string;
+  pages: number;
+}
+
+export type BookFormat = UserProfile['format'];
+export interface FormatOption {
+  id: BookFormat;
+  label: string;
+  icon: string;
+  description: string;
 }

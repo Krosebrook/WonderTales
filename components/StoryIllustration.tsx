@@ -17,15 +17,15 @@ const StoryIllustration: React.FC<StoryIllustrationProps> = ({
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Reset loaded state when image URL changes
+  // Reset loaded state when image URL changes to restart animation
   useEffect(() => {
     setIsLoaded(false);
   }, [imageUrl]);
 
   return (
-    <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-8 border-white bg-gray-200 group">
+    <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-8 border-white bg-gray-200 group transform transition-transform hover:scale-[1.01]">
        {/* Page Badge */}
-       <div className="absolute top-4 left-4 z-10">
+       <div className="absolute top-4 left-4 z-10 pointer-events-none">
            <span className="bg-yellow-400 text-yellow-900 font-bold px-4 py-2 rounded-full shadow-lg border border-yellow-200">
                Page {pageNumber}
            </span>
@@ -46,7 +46,7 @@ const StoryIllustration: React.FC<StoryIllustrationProps> = ({
 
        {/* Sound Cue Visual */}
        {soundCue && isLoaded && (
-           <div className="absolute bottom-4 right-4 z-10 animate-bounce">
+           <div className="absolute bottom-4 right-4 z-10 animate-bounce pointer-events-none">
                 <span className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-bold border border-white/30 flex items-center gap-2 shadow-lg animate-fade-in-up">
                     🔊 {soundCue}
                 </span>

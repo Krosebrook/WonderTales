@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useRef } from 'react';
 import { ScriptLine } from '../types';
+import { useTypewriter } from '../hooks/useTypewriter';
 
 interface StoryScriptProps {
   lines: ScriptLine[];
@@ -7,44 +9,18 @@ interface StoryScriptProps {
 }
 
 const StoryScript: React.FC<StoryScriptProps> = ({ lines, onFinished }) => {
-  const [displayedLineIndex, setDisplayedLineIndex] = useState(0);
-  const [displayedText, setDisplayedText] = useState('');
-  const [allFinished, setAllFinished] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { displayedLineIndex, displayedText, allFinished } = useTypewriter({ lines, onFinished });
 
+  // Scroll to bottom when new line appears
   useEffect(() => {
-    // Reset when lines change (new page)
-    setDisplayedLineIndex(0);
-    setDisplayedText('');
-    setAllFinished(false);
-  }, [lines]);
-
-  useEffect(() => {
-    if (allFinished) return;
-
-    if (displayedLineIndex < lines.length) {
-       const currentLine = lines[displayedLineIndex];
-       
-       let charIndex = 0;
-       const typeInterval = setInterval(() => {
-         setDisplayedText(currentLine.text.slice(0, charIndex));
-         charIndex++;
-         if (charIndex > currentLine.text.length) {
-            clearInterval(typeInterval);
-            setTimeout(() => {
-                setDisplayedLineIndex(prev => prev + 1);
-            }, 600); // Pause between lines
-         }
-       }, 30); // Typing speed
-       
-       return () => clearInterval(typeInterval);
-    } else {
-        setAllFinished(true);
-        onFinished();
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [displayedLineIndex, lines, allFinished, onFinished]);
+  }, [displayedLineIndex, displayedText]);
 
   return (
-    <div className="flex-1 overflow-y-auto pr-2 space-y-4 scroll-smooth">
+    <div ref={containerRef} className="flex-1 overflow-y-auto pr-2 space-y-4 scroll-smooth">
         <style>{`
           @keyframes slideUpFade {
             from {
@@ -77,7 +53,7 @@ const StoryScript: React.FC<StoryScriptProps> = ({ lines, onFinished }) => {
                     
                     <div className={`
                         p-3 rounded-2xl text-lg leading-relaxed max-w-full transition-all
-                        ${isNarrator ? 'bg-transparent text-indigo-900 px-0' : 
+                        ${isNarrator ? 'bg-transparent text-indigo-900 px-0 font-medium' : 
                           isSoundFX ? 'bg-yellow-100 text-yellow-800 italic border-l-4 border-yellow-400 font-bold shadow-sm' :
                           'bg-indigo-50 text-indigo-800 shadow-sm border border-indigo-100'}
                     `}>

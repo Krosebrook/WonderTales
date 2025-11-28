@@ -3,17 +3,23 @@ import { StoryPage, UserProfile } from '../types';
 import { generateSpeechForPage } from '../services/geminiService';
 import { getAudioContext, decodeAudioData } from '../services/audioUtils';
 
-export const useStoryAudio = (page: StoryPage, profile: UserProfile) => {
+export const useStoryAudio = (page: StoryPage | undefined, profile: UserProfile) => {
   const [isPlayingDialogue, setIsPlayingDialogue] = useState(false);
   const [ambientVolume, setAmbientVolume] = useState(0.2);
+  const [dialogueVolume, setDialogueVolume] = useState(1.0);
   
   const audioContextRef = useRef<AudioContext | null>(null);
+  
   const ambientSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const ambientGainNodeRef = useRef<GainNode | null>(null);
+  
   const dialogueSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const dialogueGainNodeRef = useRef<GainNode | null>(null);
 
   useEffect(() => {
     const initAudio = async () => {
+       if (!page) return; // Guard against undefined page during transitions
+
        if (!audioContextRef.current) {
           audioContextRef.current = getAudioContext();
        }
@@ -41,7 +47,9 @@ export const useStoryAudio = (page: StoryPage, profile: UserProfile) => {
                source.loop = true;
                source.connect(gainNode);
                gainNode.connect(ctx.destination);
-               gainNode.gain.value = ambientVolume;
+               // Smooth fade in
+               gainNode.gain.setValueAtTime(0, ctx.currentTime);
+               gainNode.gain.linearRampToValueAtTime(ambientVolume, ctx.currentTime + 1.5);
                source.start(0);
                
                ambientSourceRef.current = source;
@@ -58,10 +66,16 @@ export const useStoryAudio = (page: StoryPage, profile: UserProfile) => {
         try {
             const buffer = await decodeAudioData(base64Dialogue, ctx);
             const source = ctx.createBufferSource();
+            const gainNode = ctx.createGain();
+            
             source.buffer = buffer;
-            source.connect(ctx.destination);
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            gainNode.gain.value = dialogueVolume;
             source.start(0);
+            
             dialogueSourceRef.current = source;
+            dialogueGainNodeRef.current = gainNode;
             
             source.onended = () => {
                 setIsPlayingDialogue(false);
@@ -87,12 +101,19 @@ export const useStoryAudio = (page: StoryPage, profile: UserProfile) => {
     };
   }, [page, profile]); // Re-run when page changes
 
-  // Update volume
+  // Update volume: Ambient
   useEffect(() => {
       if (ambientGainNodeRef.current && audioContextRef.current) {
           ambientGainNodeRef.current.gain.setTargetAtTime(ambientVolume, audioContextRef.current.currentTime, 0.1);
       }
   }, [ambientVolume]);
 
-  return { isPlayingDialogue, ambientVolume, setAmbientVolume };
+  // Update volume: Dialogue
+  useEffect(() => {
+      if (dialogueGainNodeRef.current && audioContextRef.current) {
+          dialogueGainNodeRef.current.gain.setTargetAtTime(dialogueVolume, audioContextRef.current.currentTime, 0.1);
+      }
+  }, [dialogueVolume]);
+
+  return { isPlayingDialogue, ambientVolume, setAmbientVolume, dialogueVolume, setDialogueVolume };
 };

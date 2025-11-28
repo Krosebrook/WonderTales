@@ -1,6 +1,6 @@
 {
   "name": "WonderTales: Interactive Storybook",
-  "description": "A magical, interactive storybook for children where they guide the adventure with their voice.",
+  "description": "A magical, interactive storybook for children powered by Google Gemini 3 Pro. Features real-time voice interaction, dynamic 3D-style illustrations, multi-speaker narration, and adaptive ambient soundscapes.",
   "requestFramePermissions": [
     "microphone"
   ]

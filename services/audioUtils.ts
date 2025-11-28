@@ -1,3 +1,4 @@
+
 export const getAudioContext = () => {
   return new (window.AudioContext || (window as any).webkitAudioContext)({
     sampleRate: 24000,
@@ -46,4 +47,92 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+};
+
+// --- UI Sound Effects (Synthesized) ---
+
+let uiAudioCtx: AudioContext | null = null;
+
+export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'error') => {
+  try {
+    if (!uiAudioCtx) {
+      uiAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (uiAudioCtx.state === 'suspended') {
+      uiAudioCtx.resume();
+    }
+
+    const osc = uiAudioCtx.createOscillator();
+    const gain = uiAudioCtx.createGain();
+    const now = uiAudioCtx.currentTime;
+
+    osc.connect(gain);
+    gain.connect(uiAudioCtx.destination);
+
+    switch (type) {
+      case 'click':
+        // Gentle tick
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.05);
+        break;
+
+      case 'pop':
+        // Pleasant selection bubble
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(600, now + 0.1);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+        break;
+
+      case 'magic':
+        // Shimmering sweep
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+        gain.gain.setValueAtTime(0.03, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+        break;
+
+      case 'success':
+        // Major chord arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major
+        notes.forEach((freq, i) => {
+          const oscN = uiAudioCtx!.createOscillator();
+          const gainN = uiAudioCtx!.createGain();
+          oscN.connect(gainN);
+          gainN.connect(uiAudioCtx!.destination);
+          
+          const start = now + (i * 0.05);
+          oscN.type = 'sine';
+          oscN.frequency.value = freq;
+          gainN.gain.setValueAtTime(0.05, start);
+          gainN.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
+          oscN.start(start);
+          oscN.stop(start + 0.3);
+        });
+        break;
+        
+      case 'error':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+        break;
+    }
+  } catch (e) {
+    // Fail silently if audio is blocked or unsupported
+  }
 };
