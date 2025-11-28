@@ -1,56 +1,21 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { StoryProvider, useStory } from './contexts/StoryContext';
 import StoryView from './components/StoryView';
+import SetupWizard from './components/SetupWizard';
+import { UserProfile } from './types';
 
-const SetupScreen: React.FC = () => {
-  const { profile, setProfile, startStory } = useStory();
-  const [localName, setLocalName] = useState(profile.name);
-  const [localFav, setLocalFav] = useState(profile.favoriteThing);
-  const [localComp, setLocalComp] = useState(profile.companion);
+const MainContent: React.FC = () => {
+  const { status, error, pages, setProfile, startStory } = useStory();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfile({ name: localName, favoriteThing: localFav, companion: localComp });
+  const handleWizardComplete = (profile: UserProfile) => {
+    setProfile(profile);
     startStory();
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
-      <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border-8 border-yellow-300">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-indigo-600 mb-2">WonderTales</h1>
-          <p className="text-gray-500">Create your own magical adventure!</p>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">What is your name?</label>
-            <input required type="text" className="w-full p-4 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 outline-none bg-indigo-50 text-xl text-indigo-900"
-              placeholder="e.g. Charlie" value={localName} onChange={e => setLocalName(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">What do you love most?</label>
-            <input required type="text" className="w-full p-4 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 outline-none bg-indigo-50 text-xl text-indigo-900"
-              placeholder="e.g. Dinosaurs, Space" value={localFav} onChange={e => setLocalFav(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Name your sidekick!</label>
-            <input required type="text" className="w-full p-4 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 outline-none bg-indigo-50 text-xl text-indigo-900"
-              placeholder="e.g. Mr. Fluff" value={localComp} onChange={e => setLocalComp(e.target.value)} />
-          </div>
-          <button type="submit" className="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 rounded-xl font-black text-2xl shadow-lg transform transition active:scale-95">
-            Start Adventure! 🚀
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-const MainContent: React.FC = () => {
-  const { status, error, pages } = useStory();
-
-  if (status === 'setup') return <SetupScreen />;
+  if (status === 'setup') {
+    return <SetupWizard onGenerate={handleWizardComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-blue-50 flex flex-col font-sans overflow-hidden relative">

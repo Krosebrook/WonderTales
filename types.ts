@@ -1,25 +1,27 @@
 
-export interface StoryLine {
+export interface ScriptLine {
   speaker: string;
   text: string;
 }
 
 export interface StoryPage {
   pageNumber: number;
-  lines: StoryLine[];
-  imagePrompt: string;
+  title: string;
+  lines: ScriptLine[];
   choices: string[];
+  imagePrompt: string;
   imageUrl?: string;
-  soundCue?: string; // Text description of a specific sound effect (visual badge)
-  ambientSound?: string; // Description for the background audio loop
-  ambientAudioData?: string; // Base64 encoded audio for background loop
-  audioBuffer?: AudioBuffer;
+  soundCue?: string; // Visual badge text
+  ambientSound?: string; // Description for audio generator
+  ambientAudioData?: string; // Base64 encoded audio
 }
 
 export interface UserProfile {
   name: string;
-  favoriteThing: string; // e.g., "Dinosaurs", "Space", "Unicorns"
-  companion: string; // Sidekick name
+  age: number;
+  avatar: string;
+  theme: string;
+  format: 'single-pages' | 'printable-book' | 'digital';
 }
 
 export interface StoryState {
@@ -34,11 +36,4 @@ export interface StoryContextType extends StoryState {
   setProfile: (profile: UserProfile) => void;
   startStory: () => Promise<void>;
   makeChoice: (choice: string, audioInput?: string) => Promise<void>;
-}
-
-export interface AudioPart {
-  inlineData: {
-    mimeType: string;
-    data: string;
-  };
 }

@@ -43,6 +43,7 @@ const StoryView: React.FC = () => {
       {/* Left Column: Visuals */}
       <div className="flex-1 flex flex-col items-center justify-center">
         <StoryIllustration 
+          key={page.pageNumber}
           imageUrl={page.imageUrl}
           imagePrompt={page.imagePrompt}
           soundCue={page.soundCue}
@@ -55,6 +56,7 @@ const StoryView: React.FC = () => {
       <div className="flex-1 flex flex-col justify-between bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-xl border-4 border-indigo-100 h-[600px] overflow-hidden">
         
         <StoryScript 
+          key={page.pageNumber}
           lines={page.lines} 
           onFinished={() => setTextFinished(true)} 
         />

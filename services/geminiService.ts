@@ -1,38 +1,230 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
-import { UserProfile, StoryPage, StoryLine } from "../types";
+import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { UserProfile, StoryPage } from "../types";
 
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
-// Helper to parse the JSON response from the text model
-const parseStoryResponse = (text: string): Omit<StoryPage, 'pageNumber'> => {
-  try {
-    // Remove markdown code blocks if present
-    let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleanText);
-  } catch (e) {
-    console.error("Failed to parse JSON", text);
-    throw new Error("Oops! The story got a little tangled. Let's try again!");
-  }
+// --- Schemas ---
+
+const scriptSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING, description: "A fun, short title for this scene" },
+    lines: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          speaker: { type: Type.STRING, description: "Speaker name. Use 'SoundFX' for sound effects." },
+          text: { type: Type.STRING, description: "Dialogue or sound effect description (e.g. 'WHOOSH!')" }
+        },
+        required: ['speaker', 'text']
+      }
+    },
+    imagePrompt: { type: Type.STRING, description: "Detailed visual description for the illustration" },
+    choices: { 
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "Two distinct, engaging choices for the child"
+    },
+    soundCue: { type: Type.STRING, description: "Short text for a visual sound badge (e.g. 'Magical Sparkles')" },
+    ambientSound: { type: Type.STRING, description: "Description of the background ambient sound loop" }
+  },
+  required: ['title', 'lines', 'imagePrompt', 'choices', 'ambientSound', 'soundCue']
 };
 
-export const generateAmbientSound = async (description: string): Promise<string | null> => {
+// --- Specialized Generators ---
+
+/**
+ * 1. Story Logic (Gemini 3 Pro)
+ * Handles the narrative flow, reasoning, and multi-modal script generation.
+ */
+async function generateStoryScript(
+  profile: UserProfile, 
+  history: StoryPage[], 
+  userChoice?: string,
+  audioInputBase64?: string
+): Promise<any> {
+  
+  const isStart = history.length === 0;
+
+  const systemInstruction = `
+    You are an expert multi-modal AI creating an interactive storybook for a ${profile.age}-year-old child.
+    
+    **Child Profile:**
+    - Name: ${profile.name} (Age: ${profile.age})
+    - Avatar/Appearance: ${profile.avatar}
+    - Story Theme: ${profile.theme}
+
+    **Story Engine Rules:**
+    1. **Tone:** Lighthearted, whimsical, magical, and safe.
+    2. **Characters:** 
+       - Main Character: ${profile.name}
+       - Sidekick: Assign a fun, theme-appropriate sidekick (e.g., a robot for space, a crab for mermaid theme).
+    3. **Structure:** 
+       - Generate a title.
+       - Dialogue lines with speakers (Narrator, ${profile.name}, Sidekick, SoundFX).
+       - 'SoundFX' lines should be onomatopoeia (e.g. "*Pop*", "*Whoosh*").
+    4. **Visuals:** Create a vivid 'imagePrompt' (4:3 aspect ratio style).
+    5. **Audio:** 
+       - 'ambientSound': Describe a continuous background loop (e.g. "Windy forest with chirping birds").
+       - 'soundCue': A 2-3 word visual badge for the sound.
+    6. **Interactivity:** End with exactly 2 fun choices.
+
+    **Grounding:**
+    - If explaining real-world animals or places, be factually accurate but fun.
+    
+    **Output:** Strictly valid JSON matching the schema.
+  `;
+
+  let contents: any[] = [];
+
+  if (isStart) {
+    contents.push({ 
+      role: 'user', 
+      parts: [{ text: `Start a new story about ${profile.name} set in a ${profile.theme} world. Introduce the sidekick immediately.` }] 
+    });
+  } else {
+    // Provide condensed context
+    const recentHistory = history.slice(-2);
+    const contextStr = recentHistory.map((p, i) => 
+      `[Page ${p.pageNumber}: ${p.title}]\n${p.lines.map(l => `${l.speaker}: ${l.text}`).join('\n')}`
+    ).join('\n\n');
+
+    let userPrompt = `Continue the story.\n\nContext:\n${contextStr}\n\n`;
+
+    if (audioInputBase64) {
+      contents.push({
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: 'audio/wav', data: audioInputBase64 } },
+          { text: userPrompt + " The child spoke this input. React to it naturally in the story." }
+        ]
+      });
+    } else {
+      userPrompt += `The child chose: "${userChoice}".`;
+      contents.push({ role: 'user', parts: [{ text: userPrompt }] });
+    }
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents,
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+        responseSchema: scriptSchema,
+        thinkingConfig: { thinkingBudget: 1024 }
+      }
+    });
+
+    const text = response.text || '{}';
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Story Gen Error", e);
+    return {
+      title: "A Magical Glitch",
+      lines: [{ speaker: 'Narrator', text: "The magic book stuck together! Let's try that again." }],
+      imagePrompt: `A magical confusion with ${profile.theme}`,
+      choices: ["Try Again", "Go Back"],
+      soundCue: "Glitch",
+      ambientSound: "Quiet confusion"
+    };
+  }
+}
+
+/**
+ * 2. Visual Generation (Gemini 3 Pro Image)
+ */
+async function generateIllustration(prompt: string, profile: UserProfile): Promise<string> {
+  try {
+    const fullPrompt = `
+      Children's book illustration for a ${profile.age}-year-old.
+      Style: 3D animated movie style, vibrant colors, soft lighting, expressive characters.
+      Scene: ${prompt}
+      Main Character: ${profile.name} (wearing ${profile.theme} style clothes).
+      Avatar Reference: ${profile.avatar}
+      Aspect Ratio: 4:3.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: { parts: [{ text: fullPrompt }] }
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+  } catch (e) {
+    console.error("Image Gen Error", e);
+  }
+  return `https://picsum.photos/800/600?random=${Math.random()}`;
+}
+
+/**
+ * 3. Ambient Audio (Gemini Native Audio)
+ */
+async function generateAmbientLoop(description: string): Promise<string | undefined> {
+  if (!description) return undefined;
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-      contents: { parts: [{ text: `Generate a looping ambient background sound for: ${description}. Duration: 10 seconds. No speech, only atmospheric sound effects.` }] },
-      config: {
+      contents: { parts: [{ text: `Generate a soundscape: ${description}` }] },
+      config: { 
         responseModalities: ['AUDIO'],
       }
     });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || undefined;
+  } catch (e) {
+    console.error("Ambient Gen Error", e);
+    return undefined;
+  }
+}
+
+/**
+ * 4. Dialogue Speech (Gemini TTS)
+ */
+export const generateSpeechForPage = async (lines: any[], profile: UserProfile): Promise<string | null> => {
+  try {
+    const promptText = lines.map(l => `${l.speaker}: ${l.text}`).join('\n');
+    
+    // We map generic 'Sidekick' to a voice, or if the story generates a specific name, 
+    // we hope it maps to 'Fenrir' if we list it here, or we use a fallback.
+    // Ideally we'd parse the script to find the sidekick name.
+    // For now, we assume standard roles.
+    
+    const speakerVoiceConfigs = [
+      { speaker: 'Narrator', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+      { speaker: profile.name, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+      { speaker: 'Sidekick', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } } }, 
+      { speaker: 'SoundFX', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-preview-tts',
+      contents: { parts: [{ text: promptText }] },
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          multiSpeakerVoiceConfig: { speakerVoiceConfigs }
+        }
+      }
+    });
+
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
   } catch (e) {
-    console.error("Ambient sound generation failed", e);
+    console.error("TTS Error", e);
     return null;
   }
 };
 
+/**
+ * Orchestrator
+ */
 export const generateNextStorySegment = async (
   profile: UserProfile,
   history: StoryPage[],
@@ -40,203 +232,22 @@ export const generateNextStorySegment = async (
   audioInputBase64?: string
 ): Promise<StoryPage> => {
   
-  const isStart = history.length === 0;
-  const pageNumber = history.length + 1;
-
-  // 1. Story Generation (Gemini 3 Pro)
-  const systemInstruction = `You are a professional children's book author for 7-year-olds. 
-  Create a fun, interactive, whimsical story.
-  The child's name is ${profile.name}.
-  They love ${profile.favoriteThing}.
-  They have a sidekick named ${profile.companion}.
+  const scriptData = await generateStoryScript(profile, history, userChoiceOrInput, audioInputBase64);
   
-  Structure the story page by page in a SCRIPT format.
-  Each page should have:
-  - Dialogue split into lines with identified speakers. 
-    - Speakers can be: 'Narrator', '${profile.name}', '${profile.companion}', or 'SoundFX'.
-    - For 'SoundFX', use onomatopoeia (e.g., "*Whoosh*", "Splash!", "Roar!").
-  - A vivid visual description for an illustration (bold colors, cartoon style) that captures the ACTION.
-  - 2 distinct choices for the child to make next.
-  - A 'soundCue' for a specific sound effect visual badge (e.g., "Thunder clap").
-  - An 'ambientSound' description for the continuous background atmosphere (e.g., "Rainy forest with gentle wind").
-  
-  Tone: Exciting, safe, funny, magical.
-  
-  IMPORTANT: You must return PURE JSON matching this schema:
-  {
-    "lines": [
-      {"speaker": "Narrator", "text": "The story text..."},
-      {"speaker": "${profile.name}", "text": "I love this!"},
-      {"speaker": "SoundFX", "text": "*Poof*"}
-    ],
-    "imagePrompt": "A detailed description...",
-    "choices": ["Option 1", "Option 2"],
-    "soundCue": "Magical sparkles",
-    "ambientSound": "Enchanted forest ambience"
-  }
-  `;
-
-  let contents: any[] = [];
-  
-  if (isStart) {
-    contents.push({ text: `Start a new story about ${profile.name} and ${profile.companion} involving ${profile.favoriteThing}.` });
-  } else {
-    // Build context from history (last 3 pages to keep context but save tokens)
-    const context = history.slice(-3).map(p => 
-      `Page ${p.pageNumber}:\n${p.lines.map(l => `${l.speaker}: ${l.text}`).join('\n')}`
-    ).join('\n---\n');
-    
-    let prompt = `Continue the story. Previous context:\n${context}\n.`;
-    
-    if (audioInputBase64) {
-      contents.push({
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: 'audio/wav', data: audioInputBase64 } },
-          { text: prompt + " The user responded with the attached audio. Incorporate their choice or reaction." }
-        ]
-      });
-    } else {
-      prompt += ` The user chose: "${userChoiceOrInput}".`;
-      contents.push({ text: prompt });
-    }
-  }
-
-  const storyModel = 'gemini-3-pro-preview'; 
-
-  const storyResponse = await ai.models.generateContent({
-    model: storyModel,
-    contents: contents.length > 0 && contents[0].role ? contents : [{ role: 'user', parts: [{ text: contents[0].text }] }], 
-    config: {
-      systemInstruction,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          lines: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                speaker: { type: Type.STRING },
-                text: { type: Type.STRING }
-              }
-            }
-          },
-          imagePrompt: { type: Type.STRING },
-          choices: { 
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          },
-          soundCue: { type: Type.STRING },
-          ambientSound: { type: Type.STRING }
-        },
-        required: ['lines', 'imagePrompt', 'choices', 'ambientSound']
-      }
-    }
-  });
-
-  const storyData = parseStoryResponse(storyResponse.text || '{}');
-
-  // 2. Parallel Generation (Image & Ambient Sound)
-  
-  // Image Generation
-  const imagePromise = (async () => {
-    try {
-        const contextImagePrompt = `Scene Description: ${storyData.imagePrompt}. 
-        Characters: ${profile.name} is a happy young child. ${profile.companion} is a distinct, cute magical sidekick character. 
-        Style: 3D Pixar-style animation, vibrant colors, expressive faces, high quality 4:3.`;
-
-        const imageResponse = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
-        contents: {
-            parts: [{ text: contextImagePrompt }]
-        }
-        });
-
-        for (const part of imageResponse.candidates?.[0]?.content?.parts || []) {
-            if (part.inlineData) {
-                return `data:image/png;base64,${part.inlineData.data}`;
-            }
-        }
-    } catch (err) {
-        console.error("Image generation failed", err);
-    }
-    return `https://picsum.photos/800/600?random=${Math.random()}`;
-  })();
-
-  // Ambient Sound Generation
-  const soundPromise = (async () => {
-      if (storyData.ambientSound) {
-          return await generateAmbientSound(storyData.ambientSound);
-      }
-      return null;
-  })();
-
-  const [imageUrl, ambientAudioData] = await Promise.all([imagePromise, soundPromise]);
+  const [imageUrl, ambientAudioData] = await Promise.all([
+    generateIllustration(scriptData.imagePrompt, profile),
+    generateAmbientLoop(scriptData.ambientSound)
+  ]);
 
   return {
-    pageNumber,
-    lines: storyData.lines || [],
-    imagePrompt: storyData.imagePrompt,
-    choices: storyData.choices,
-    imageUrl: imageUrl,
-    soundCue: storyData.soundCue,
-    ambientSound: storyData.ambientSound,
-    ambientAudioData: ambientAudioData || undefined
+    pageNumber: history.length + 1,
+    title: scriptData.title,
+    lines: scriptData.lines,
+    choices: scriptData.choices,
+    imagePrompt: scriptData.imagePrompt,
+    soundCue: scriptData.soundCue,
+    ambientSound: scriptData.ambientSound,
+    imageUrl,
+    ambientAudioData
   };
-};
-
-export const generateSpeechForPage = async (lines: StoryLine[], profile: UserProfile): Promise<string | null> => {
-  try {
-    // Construct the multi-speaker transcript
-    const promptText = lines.map(l => `${l.speaker}: ${l.text}`).join('\n');
-    
-    // Define speakers
-    // We map: Narrator, User, Companion, SoundFX
-    // Voices: Kore (Narrator), Puck (Child), Fenrir (Companion), Charon (SFX)
-    
-    const speakerVoiceConfigs = [
-      { speaker: 'Narrator', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-      { speaker: profile.name, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
-      { speaker: profile.companion, voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } } },
-      { speaker: 'SoundFX', voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } }
-    ];
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-preview-tts',
-        contents: { parts: [{ text: promptText }] },
-        config: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-                multiSpeakerVoiceConfig: {
-                    speakerVoiceConfigs
-                }
-            }
-        }
-    });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return base64Audio || null;
-  } catch (e) {
-    console.error("Multi-speaker TTS failed", e);
-    // Fallback to single speaker if multi fails (sometimes happens with too many speakers in preview)
-    try {
-        const simpleText = lines.map(l => l.text).join(' ');
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-tts',
-            contents: { parts: [{ text: simpleText }] },
-            config: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                    voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
-                }
-            }
-        });
-        return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
-    } catch (fallbackError) {
-        console.error("Fallback TTS failed", fallbackError);
-        return null;
-    }
-  }
 };
