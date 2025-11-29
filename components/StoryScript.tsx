@@ -25,7 +25,7 @@ const StoryScript: React.FC<StoryScriptProps> = ({ lines, onFinished }) => {
           @keyframes slideUpFade {
             from {
               opacity: 0;
-              transform: translateY(20px);
+              transform: translateY(10px);
             }
             to {
               opacity: 1;

@@ -13,7 +13,11 @@ const StoryView: React.FC = () => {
   const page = pages[currentPageIndex];
   
   // Audio Hook manages AudioContext, Dialogue, Ambient, and Volume
-  const { ambientVolume, setAmbientVolume, dialogueVolume, setDialogueVolume } = useStoryAudio(page, profile);
+  const { 
+    ambientVolume, setAmbientVolume, 
+    dialogueVolume, setDialogueVolume,
+    isPlayingDialogue, playDialogue 
+  } = useStoryAudio(page, profile);
   
   // Track if text has finished typing to reveal controls
   const [textFinished, setTextFinished] = useState(false);
@@ -57,6 +61,33 @@ const StoryView: React.FC = () => {
       {/* Right Column: Narrative & Interaction */}
       <div className="flex-1 flex flex-col justify-between bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-xl border-4 border-indigo-100 h-[600px] overflow-hidden relative z-0">
         
+        {/* Header with Read Aloud Button */}
+        <div className="flex justify-between items-center mb-2 min-h-[32px]">
+            <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Story Script</span>
+            {page && (
+              <button 
+                onClick={playDialogue}
+                disabled={isPlayingDialogue}
+                className={`
+                  flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all
+                  ${isPlayingDialogue 
+                    ? 'bg-indigo-100 text-indigo-400 cursor-default' 
+                    : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm hover:shadow-md cursor-pointer active:scale-95'}
+                `}
+              >
+                {isPlayingDialogue ? (
+                  <>
+                    <span className="animate-pulse">🔊</span> Playing...
+                  </>
+                ) : (
+                  <>
+                    <span>🗣️</span> Read Aloud
+                  </>
+                )}
+              </button>
+            )}
+        </div>
+
         {page && (
             <StoryScript 
               key={page.pageNumber}

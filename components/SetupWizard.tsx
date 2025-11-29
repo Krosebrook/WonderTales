@@ -145,7 +145,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
                 <div className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
                     <label className="flex flex-col gap-1 text-xs font-medium text-slate-700">
-                      Child&apos;s name
+                      Name
                       <input
                         type="text"
                         value={name}
