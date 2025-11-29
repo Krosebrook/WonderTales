@@ -1,70 +1,13 @@
-
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { StoryState, UserProfile, StoryContextType } from '../types';
-import { generateNextStorySegment } from '../services/geminiService';
+import React, { createContext, useContext, ReactNode, useCallback } from 'react';
+import { StoryContextType, UserProfile } from '../types';
+import { generateNextStorySegment } from '../services/orchestrator';
+import { useStoryReducer } from '../hooks/useStoryReducer';
+import { StorageService } from '../services/storage';
 
 const StoryContext = createContext<StoryContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'WONDERTALES_STATE_V1';
-
-export const INITIAL_PROFILE: UserProfile = {
-  name: '',
-  age: 7,
-  avatar: '🧒',
-  theme: '',
-  format: 'digital',
-  animationStyle: 'gentle'
-};
-
-const INITIAL_STATE: StoryState = {
-  status: 'setup',
-  pages: [],
-  currentPageIndex: 0,
-  profile: INITIAL_PROFILE
-};
-
 export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize state from local storage if available
-  const [state, setState] = useState<StoryState>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Basic validation to ensure we don't load corrupt state
-        if (parsed && parsed.profile) {
-          // If we were mid-loading or error, revert to a safe reading state or setup
-          if (parsed.status === 'loading' || parsed.status === 'error') {
-             if (parsed.pages && parsed.pages.length > 0) {
-               parsed.status = 'reading';
-             } else {
-               parsed.status = 'setup';
-             }
-          }
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn("Failed to load story from storage", e);
-    }
-    return INITIAL_STATE;
-  });
-
-  // Persist state to local storage whenever it changes
-  useEffect(() => {
-    try {
-      // Don't save errors or transient loading states if they have no pages
-      const stateToSave = { ...state };
-      if (stateToSave.status === 'error') stateToSave.error = undefined;
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-    } catch (e) {
-      console.warn("Failed to save story to storage (likely quota exceeded)", e);
-    }
-  }, [state]);
-
-  const setProfile = useCallback((profile: UserProfile) => {
-    setState(prev => ({ ...prev, profile }));
-  }, []);
+  const { state, dispatch } = useStoryReducer();
 
   const handlePageGeneration = async (
     profile: UserProfile, 
@@ -72,50 +15,51 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     choice?: string, 
     audio?: string
   ) => {
+    dispatch({ type: 'START_LOADING' });
     try {
       const nextPage = await generateNextStorySegment(profile, history, choice, audio);
-      setState(prev => ({
-        ...prev,
-        status: 'reading',
-        pages: [...prev.pages, nextPage],
-        currentPageIndex: prev.pages.length // Point to new page (index is length because we appended)
-      }));
+      dispatch({ type: 'ADD_PAGE', payload: nextPage });
     } catch (error) {
-      console.error("Story Generation Failed:", error);
-      setState(prev => ({ 
-        ...prev, 
-        status: 'error', 
-        error: 'The story magic needs a moment. Please try again!' 
-      }));
+      console.error("StoryContext: Generation Failed", error);
+      dispatch({ type: 'SET_ERROR', payload: "The magic interrupted. Let's try again!" });
     }
   };
 
+  const setProfile = useCallback((profile: UserProfile) => {
+    dispatch({ type: 'SET_PROFILE', payload: profile });
+  }, [dispatch]);
+
   const startStory = useCallback(async () => {
     if (!state.profile.name) return;
-    // Clearing pages triggers a fresh start
-    const newState: StoryState = { 
-      ...state, 
-      status: 'loading', 
-      error: undefined, 
-      pages: [],
-      currentPageIndex: 0
-    };
-    setState(newState);
-    await handlePageGeneration(state.profile, []);
-  }, [state.profile]);
+    
+    dispatch({ type: 'START_LOADING' });
+    try {
+        // Reset storage for new story logic
+        StorageService.clearState(); 
+        
+        // Force a fresh start from Orchestrator with empty history
+        const firstPage = await generateNextStorySegment(state.profile, [], undefined, undefined);
+        
+        // We need to reset the state completely before adding the page to avoid appending
+        dispatch({ type: 'RESET_STORY' });
+        dispatch({ type: 'SET_PROFILE', payload: state.profile });
+        dispatch({ type: 'ADD_PAGE', payload: firstPage });
+        
+    } catch (error) {
+         dispatch({ type: 'SET_ERROR', payload: "Could not start story." });
+    }
+  }, [state.profile, dispatch]);
 
   const makeChoice = useCallback(async (choice: string, audioInput?: string) => {
-    setState(prev => ({ ...prev, status: 'loading', error: undefined }));
     await handlePageGeneration(state.profile, state.pages, choice, audioInput);
-  }, [state.profile, state.pages]);
+  }, [state.profile, state.pages, dispatch]);
 
   const resetStory = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setState(INITIAL_STATE);
-  }, []);
+    dispatch({ type: 'RESET_STORY' });
+  }, [dispatch]);
 
   return (
-    <StoryContext.Provider value={{ ...state, setProfile, startStory, makeChoice, resetStory }}>
+    <StoryContext.Provider value={{ ...state, dispatch, setProfile, startStory, makeChoice, resetStory }}>
       {children}
     </StoryContext.Provider>
   );

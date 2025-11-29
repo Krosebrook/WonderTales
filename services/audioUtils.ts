@@ -16,11 +16,6 @@ export const decodeAudioData = async (
     bytes[i] = binaryString.charCodeAt(i);
   }
   
-  // Create buffer from raw PCM if headerless, but Gemini TTS usually sends standard formats wrapped or raw PCM.
-  // The Gemini TTS preview sends raw PCM 24kHz mono usually.
-  // We need to implement manual decoding for raw PCM if the standard decodeAudioData fails,
-  // but for the prompt specific instructions, we use the manual PCM decoding logic provided.
-
   const dataInt16 = new Int16Array(bytes.buffer);
   const numChannels = 1;
   const sampleRate = 24000;
@@ -49,30 +44,27 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
   });
 };
 
-// --- UI Sound Effects (Synthesized) ---
+// --- UI Sound Effects ---
 
-let uiAudioCtx: AudioContext | null = null;
+// We keep this simple singleton for UI clicks, separate from the Story Audio Engine
+let uiCtx: AudioContext | null = null;
 
 export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'error') => {
   try {
-    if (!uiAudioCtx) {
-      uiAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!uiCtx) {
+      uiCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    if (uiAudioCtx.state === 'suspended') {
-      uiAudioCtx.resume();
-    }
+    if (uiCtx.state === 'suspended') uiCtx.resume();
 
-    const osc = uiAudioCtx.createOscillator();
-    const gain = uiAudioCtx.createGain();
-    const now = uiAudioCtx.currentTime;
+    const osc = uiCtx.createOscillator();
+    const gain = uiCtx.createGain();
+    const now = uiCtx.currentTime;
 
     osc.connect(gain);
-    gain.connect(uiAudioCtx.destination);
+    gain.connect(uiCtx.destination);
 
     switch (type) {
       case 'click':
-        // Gentle tick
-        osc.type = 'sine';
         osc.frequency.setValueAtTime(800, now);
         osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
         gain.gain.setValueAtTime(0.05, now);
@@ -80,9 +72,7 @@ export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'e
         osc.start(now);
         osc.stop(now + 0.05);
         break;
-
       case 'pop':
-        // Pleasant selection bubble
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(300, now);
         osc.frequency.linearRampToValueAtTime(600, now + 0.1);
@@ -91,48 +81,18 @@ export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'e
         osc.start(now);
         osc.stop(now + 0.1);
         break;
-
       case 'magic':
-        // Shimmering sweep
+      case 'success':
         osc.type = 'sine';
         osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
-        gain.gain.setValueAtTime(0.03, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+        gain.gain.setValueAtTime(0.05, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.3);
         osc.start(now);
         osc.stop(now + 0.3);
         break;
-
-      case 'success':
-        // Major chord arpeggio
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major
-        notes.forEach((freq, i) => {
-          const oscN = uiAudioCtx!.createOscillator();
-          const gainN = uiAudioCtx!.createGain();
-          oscN.connect(gainN);
-          gainN.connect(uiAudioCtx!.destination);
-          
-          const start = now + (i * 0.05);
-          oscN.type = 'sine';
-          oscN.frequency.value = freq;
-          gainN.gain.setValueAtTime(0.05, start);
-          gainN.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
-          oscN.start(start);
-          oscN.stop(start + 0.3);
-        });
-        break;
-        
-      case 'error':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.linearRampToValueAtTime(100, now + 0.2);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.2);
-        osc.start(now);
-        osc.stop(now + 0.2);
-        break;
     }
   } catch (e) {
-    // Fail silently if audio is blocked or unsupported
+    // Ignore
   }
 };

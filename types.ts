@@ -1,3 +1,6 @@
+import React from 'react';
+
+// --- Domain Models ---
 
 export interface ScriptLine {
   speaker: string;
@@ -36,12 +39,27 @@ export interface StoryState {
   error?: string;
 }
 
+// --- Reducer Actions ---
+
+export type StoryAction =
+  | { type: 'SET_PROFILE'; payload: UserProfile }
+  | { type: 'START_LOADING' }
+  | { type: 'ADD_PAGE'; payload: StoryPage }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'RESET_STORY' }
+  | { type: 'HYDRATE_STATE'; payload: StoryState };
+
+// --- Context ---
+
 export interface StoryContextType extends StoryState {
-  setProfile: (profile: UserProfile) => void;
+  dispatch: React.Dispatch<StoryAction>;
   startStory: () => Promise<void>;
   makeChoice: (choice: string, audioInput?: string) => Promise<void>;
   resetStory: () => void;
+  setProfile: (profile: UserProfile) => void;
 }
+
+// --- Configuration Types ---
 
 export type ThemeCategory = "space" | "fantasy" | "animals" | "vehicles" | "mixed";
 

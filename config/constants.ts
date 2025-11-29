@@ -114,6 +114,38 @@ export const THEME_PRESETS: ThemePreset[] = [
     category: "mixed",
     defaultAnimation: 'zoomy',
   },
+  {
+    id: "magical-circus",
+    label: "Magical Circus",
+    emoji: "🎪",
+    description: "Acrobat animals and funny clowns performing tricks.",
+    category: "mixed",
+    defaultAnimation: "bouncy",
+  },
+  {
+    id: "deep-sea-science",
+    label: "Deep Sea Explorers",
+    emoji: "🐙",
+    description: "Discovering glowing fish in a yellow submarine.",
+    category: "vehicles",
+    defaultAnimation: "gentle",
+  },
+  {
+    id: "wizard-academy",
+    label: "Wizard Academy",
+    emoji: "🧙‍♂️",
+    description: "Learning spells and flying on brooms.",
+    category: "fantasy",
+    defaultAnimation: "zoomy",
+  },
+  {
+    id: "camping-trip",
+    label: "Cozy Camping",
+    emoji: "⛺",
+    description: "Roasting marshmallows under the stars.",
+    category: "mixed",
+    defaultAnimation: "gentle",
+  }
 ];
 
 export const AVATAR_OPTIONS = [
