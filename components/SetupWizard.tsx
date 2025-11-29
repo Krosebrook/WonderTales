@@ -102,7 +102,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
         age: age || 7,
         avatar,
         theme: resolvedTheme,
-        format
+        format,
+        animationStyle: selectedThemePreset?.defaultAnimation || 'gentle'
     });
   };
 

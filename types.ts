@@ -25,6 +25,7 @@ export interface UserProfile {
   avatar: string;
   theme: string;
   format: 'single-pages' | 'printable-book' | 'digital';
+  animationStyle: 'gentle' | 'bouncy' | 'zoomy';
 }
 
 export interface StoryState {
@@ -39,6 +40,7 @@ export interface StoryContextType extends StoryState {
   setProfile: (profile: UserProfile) => void;
   startStory: () => Promise<void>;
   makeChoice: (choice: string, audioInput?: string) => Promise<void>;
+  resetStory: () => void;
 }
 
 export type ThemeCategory = "space" | "fantasy" | "animals" | "vehicles" | "mixed";
@@ -49,6 +51,7 @@ export interface ThemePreset {
   emoji: string;
   description: string;
   category: ThemeCategory;
+  defaultAnimation: UserProfile['animationStyle'];
 }
 
 export interface PagePreset {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useStory } from '../contexts/StoryContext';
 import { useStoryAudio } from '../hooks/useStoryAudio';
@@ -9,7 +8,7 @@ import VolumeControl from './VolumeControl';
 import TransitionOverlay from './TransitionOverlay';
 
 const StoryView: React.FC = () => {
-  const { pages, currentPageIndex, profile, makeChoice, status } = useStory();
+  const { pages, currentPageIndex, profile, makeChoice, status, resetStory } = useStory();
   const page = pages[currentPageIndex];
   
   // Audio Hook manages AudioContext, Dialogue, Ambient, and Volume
@@ -54,6 +53,7 @@ const StoryView: React.FC = () => {
               soundCue={page.soundCue}
               pageNumber={page.pageNumber}
               isLoading={isLoading}
+              animationStyle={profile.animationStyle}
             />
         )}
       </div>
@@ -61,9 +61,23 @@ const StoryView: React.FC = () => {
       {/* Right Column: Narrative & Interaction */}
       <div className="flex-1 flex flex-col justify-between bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-xl border-4 border-indigo-100 h-[600px] overflow-hidden relative z-0">
         
-        {/* Header with Read Aloud Button */}
+        {/* Header with Read Aloud & Home Button */}
         <div className="flex justify-between items-center mb-2 min-h-[32px]">
-            <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Story Script</span>
+            <div className="flex items-center gap-2">
+               <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Script</span>
+               <button 
+                  onClick={() => {
+                    if (window.confirm("Start a new story? This one will be lost.")) {
+                      resetStory();
+                    }
+                  }}
+                  className="text-xs bg-indigo-50 text-indigo-400 px-2 py-1 rounded hover:bg-red-50 hover:text-red-500 transition-colors"
+                  title="Start New Story"
+               >
+                 🏠 New
+               </button>
+            </div>
+
             {page && (
               <button 
                 onClick={playDialogue}

@@ -8,6 +8,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🦖",
     description: "Dinosaurs exploring faraway galaxies.",
     category: "space",
+    defaultAnimation: 'zoomy',
   },
   {
     id: "mermaid-city",
@@ -15,6 +16,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🧜‍♀️",
     description: "Underwater skyscrapers and mermaid schools.",
     category: "fantasy",
+    defaultAnimation: 'gentle',
   },
   {
     id: "ninja-kittens",
@@ -22,6 +24,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🐱",
     description: "Sneaky cats on secret missions.",
     category: "animals",
+    defaultAnimation: 'bouncy',
   },
   {
     id: "robot-school",
@@ -29,6 +32,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🤖",
     description: "Robots learning art and music.",
     category: "vehicles",
+    defaultAnimation: 'bouncy',
   },
   {
     id: "unicorn-detectives",
@@ -36,6 +40,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🦄",
     description: "Mystery-solving unicorn friends.",
     category: "fantasy",
+    defaultAnimation: 'gentle',
   },
   {
     id: "jungle-racers",
@@ -43,6 +48,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🏎️",
     description: "Animal drivers in wild races.",
     category: "vehicles",
+    defaultAnimation: 'zoomy',
   },
   {
     id: "candy-kingdom",
@@ -50,6 +56,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🍭",
     description: "A magical, sugary world made of sweets and treats.",
     category: "mixed",
+    defaultAnimation: 'bouncy',
   },
   {
     id: "pirate-hunt",
@@ -57,6 +64,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🏴‍☠️",
     description: "Sailing the seven seas for gold.",
     category: "fantasy",
+    defaultAnimation: 'zoomy',
   },
   {
     id: "superhero-squad",
@@ -64,6 +72,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🦸",
     description: "Saving the city with super powers.",
     category: "fantasy",
+    defaultAnimation: 'zoomy',
   },
   {
     id: "dragon-riders",
@@ -71,12 +80,46 @@ export const THEME_PRESETS: ThemePreset[] = [
     emoji: "🐉",
     description: "Flying high on friendly dragons.",
     category: "fantasy",
+    defaultAnimation: 'zoomy',
+  },
+  {
+    id: "fairy-garden",
+    label: "Secret Fairy Garden",
+    emoji: "🧚‍♀️",
+    description: "Tiny adventures in a magical backyard.",
+    category: "fantasy",
+    defaultAnimation: 'gentle',
+  },
+  {
+    id: "construction-crew",
+    label: "Busy Builder Crew",
+    emoji: "🚧",
+    description: "Building skyscrapers and fixing roads.",
+    category: "vehicles",
+    defaultAnimation: 'bouncy',
+  },
+  {
+    id: "winter-wonderland",
+    label: "Winter Wonderland",
+    emoji: "⛄",
+    description: "Sledding with penguins and yetis.",
+    category: "mixed",
+    defaultAnimation: 'gentle',
+  },
+  {
+    id: "time-travelers",
+    label: "Time Travelers",
+    emoji: "⏳",
+    description: "Visiting castles and dinosaurs in the past.",
+    category: "mixed",
+    defaultAnimation: 'zoomy',
   },
 ];
 
 export const AVATAR_OPTIONS = [
   "🧒", "👧", "🦊", "🐼", "🦄", "🤖", 
-  "👽", "🦁", "🐸", "🧚‍♀️", "🦸", "🐶"
+  "👽", "🦁", "🐸", "🧚‍♀️", "🦸", "🐶",
+  "🐉", "🧙‍♂️", "🥷", "🏴‍☠️", "🐯", "🐰"
 ];
 
 export const PAGE_PRESETS: PagePreset[] = [
