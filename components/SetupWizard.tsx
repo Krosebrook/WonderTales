@@ -40,6 +40,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
     if (!isValid || !format) return;
     playSystemSound('success');
     setIsSubmitting(true);
+    // Slight delay to allow sound to play and animation to start
     await new Promise(r => setTimeout(r, 800));
     
     onGenerate({
@@ -86,7 +87,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
           </div>
 
           <footer className="border-t border-slate-100 bg-slate-50/70 px-6 py-4 rounded-b-3xl flex justify-end">
-            <button disabled={!isValid || isSubmitting} onClick={handleSubmit} className={cn("px-8 py-3 rounded-full text-sm font-bold text-white shadow-lg transition-all", isValid && !isSubmitting ? "bg-indigo-600 hover:bg-indigo-700 hover:scale-105" : "bg-slate-300 cursor-not-allowed")}>
+            <button 
+              disabled={!isValid || isSubmitting} 
+              onClick={handleSubmit} 
+              className={cn(
+                "px-8 py-3 rounded-full text-sm font-bold text-white shadow-lg transition-all transform", 
+                isValid && !isSubmitting ? "bg-indigo-600 hover:bg-indigo-700 hover:scale-105 active:scale-95" : "bg-slate-300 cursor-not-allowed"
+              )}
+            >
               {isSubmitting ? "Creating Magic..." : "Start Adventure"}
             </button>
           </footer>
