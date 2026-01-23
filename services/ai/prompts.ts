@@ -44,6 +44,7 @@ ${formatChildProfile(profile)}
 - 'lines': Array of { speaker, text }.
 - 'choices': Exactly 2 short, fun options for the child.
 - 'imagePrompt': Vibrant, 3D-animated movie style description (4:3 ratio).
+- 'sidekick': { name, emoji } object defining the sidekick's identity.
 `;
 
 // --- User/Input Prompts ---
@@ -64,7 +65,12 @@ export const buildStoryUserPrompt = (
 
   // 2. Context Construction
   const contextStr = formatStoryContext(history);
-  let instruction = `Continue the story based on the context below.\n\n### Previous Context\n${contextStr}\n\n### User Input\n`;
+  
+  // Extract previous sidekick info if available to encourage consistency
+  const lastPage = history[history.length - 1];
+  const sidekickHint = lastPage?.sidekick ? `\n(Sidekick: ${lastPage.sidekick.name} ${lastPage.sidekick.emoji})` : "";
+
+  let instruction = `Continue the story based on the context below.${sidekickHint}\n\n### Previous Context\n${contextStr}\n\n### User Input\n`;
 
   // 3. Input Handling
   if (audioInputBase64) {

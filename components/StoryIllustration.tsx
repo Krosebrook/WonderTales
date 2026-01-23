@@ -6,6 +6,7 @@ interface StoryIllustrationProps {
   soundCue?: string;
   pageNumber: number;
   isLoading: boolean;
+  animationStyle: string;
 }
 
 const StoryIllustration: React.FC<StoryIllustrationProps> = ({ 
@@ -46,10 +47,17 @@ const StoryIllustration: React.FC<StoryIllustrationProps> = ({
 
        {/* Sound Cue Visual */}
        {soundCue && isLoaded && (
-           <div className="absolute bottom-4 right-4 z-10 animate-bounce pointer-events-none">
-                <span className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-bold border border-white/30 flex items-center gap-2 shadow-lg animate-fade-in-up">
-                    🔊 {soundCue}
-                </span>
+           <div className="absolute bottom-4 right-4 z-10 flex items-center pointer-events-none">
+                {/* Pulsing Ring Effect */}
+                <div className="absolute right-0 w-full h-full bg-white/20 rounded-full animate-ping-slow"></div>
+                
+                <div className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-bold border border-white/30 flex items-center gap-2 shadow-lg animate-bounce-subtle">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                    </span>
+                    <span>{soundCue}</span>
+                </div>
            </div>
        )}
        
@@ -61,12 +69,18 @@ const StoryIllustration: React.FC<StoryIllustrationProps> = ({
        )}
        
        <style>{`
-         @keyframes fadeInUp {
-           from { opacity: 0; transform: translateY(10px); }
-           to { opacity: 1; transform: translateY(0); }
+         @keyframes pingSlow {
+           75%, 100% { transform: scale(1.5); opacity: 0; }
          }
-         .animate-fade-in-up {
-           animation: fadeInUp 0.5s ease-out forwards;
+         @keyframes bounceSubtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+         }
+         .animate-ping-slow {
+           animation: pingSlow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+         }
+         .animate-bounce-subtle {
+           animation: bounceSubtle 3s ease-in-out infinite;
          }
        `}</style>
     </div>

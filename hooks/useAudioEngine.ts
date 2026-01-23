@@ -28,42 +28,46 @@ export const useAudioEngine = (page: StoryPage | undefined, profile: UserProfile
   };
 
   const playAmbient = async (base64: string) => {
-    const ctx = await initContext();
-    
-    // Stop previous
-    if (ambientRef.current.source) {
-      try { ambientRef.current.source.stop(); } catch(e){}
-    }
+    try {
+      const ctx = await initContext();
+      
+      // Stop previous
+      if (ambientRef.current.source) {
+        try { ambientRef.current.source.stop(); } catch(e){}
+      }
 
-    const buffer = await decodeAudioData(base64, ctx);
-    const source = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    
-    source.buffer = buffer;
-    source.loop = true;
-    source.connect(gain);
-    gain.connect(ctx.destination);
-    
-    // Fade in
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(ambientVolume, ctx.currentTime + 2);
-    
-    source.start(0);
-    ambientRef.current = { source, gain };
+      const buffer = await decodeAudioData(base64, ctx);
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      
+      // Fade in
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(ambientVolume, ctx.currentTime + 2);
+      
+      source.start(0);
+      ambientRef.current = { source, gain };
+    } catch (e) {
+      console.warn("AudioEngine: Failed to play ambient", e);
+    }
   };
 
   const playDialogue = useCallback(async () => {
     if (!page) return;
-    const ctx = await initContext();
-
-    // Stop existing
-    if (dialogueRef.current.source) {
-      try { dialogueRef.current.source.stop(); } catch(e){}
-    }
-
-    setIsPlayingDialogue(true);
-
     try {
+      const ctx = await initContext();
+
+      // Stop existing
+      if (dialogueRef.current.source) {
+        try { dialogueRef.current.source.stop(); } catch(e){}
+      }
+
+      setIsPlayingDialogue(true);
+
       let base64 = audioCache.current.get(page.pageNumber);
       
       if (!base64) {
@@ -94,6 +98,15 @@ export const useAudioEngine = (page: StoryPage | undefined, profile: UserProfile
     }
   }, [page, profile, dialogueVolume]);
 
+  // Handle New Story Reset
+  useEffect(() => {
+    if (page?.pageNumber === 1) {
+      audioCache.current.clear();
+      // Also stop ambient if it's running from a previous session and we are starting fresh
+      // Although usually we want ambient to transition, a page 1 reset implies a new context.
+    }
+  }, [page?.pageNumber]);
+
   // Page Transition Effect
   useEffect(() => {
     if (!page) return;
@@ -106,25 +119,41 @@ export const useAudioEngine = (page: StoryPage | undefined, profile: UserProfile
     }
 
     // Handle Dialogue Auto-play
-    playDialogue();
+    // We add a small delay to ensure the UI transition has settled before speaking
+    const timer = setTimeout(() => {
+        playDialogue();
+    }, 500);
 
     return () => {
+        clearTimeout(timer);
         if (dialogueRef.current.source) try { dialogueRef.current.source.stop(); } catch(e){}
     };
-  }, [page]); 
+  }, [page, playDialogue]); 
 
   // Volume Updates
   useEffect(() => {
     if (ambientRef.current.gain && ctxRef.current) {
-      ambientRef.current.gain.gain.setTargetAtTime(ambientVolume, ctxRef.current.currentTime, 0.1);
+      try {
+        ambientRef.current.gain.gain.setTargetAtTime(ambientVolume, ctxRef.current.currentTime, 0.1);
+      } catch (e) {}
     }
   }, [ambientVolume]);
 
   useEffect(() => {
     if (dialogueRef.current.gain && ctxRef.current) {
-      dialogueRef.current.gain.gain.setTargetAtTime(dialogueVolume, ctxRef.current.currentTime, 0.1);
+      try {
+        dialogueRef.current.gain.gain.setTargetAtTime(dialogueVolume, ctxRef.current.currentTime, 0.1);
+      } catch (e) {}
     }
   }, [dialogueVolume]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+       if (ambientRef.current.source) try { ambientRef.current.source.stop(); } catch(e){}
+       if (dialogueRef.current.source) try { dialogueRef.current.source.stop(); } catch(e){}
+    };
+  }, []);
 
   return {
     isPlayingDialogue,

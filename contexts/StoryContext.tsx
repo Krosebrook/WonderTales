@@ -58,8 +58,16 @@ export const StoryProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     dispatch({ type: 'RESET_STORY' });
   }, [dispatch]);
 
+  const continueStory = useCallback(() => {
+    dispatch({ type: 'CONTINUE_STORY' });
+  }, [dispatch]);
+
+  const clearError = useCallback(() => {
+    dispatch({ type: 'CLEAR_ERROR' });
+  }, [dispatch]);
+
   return (
-    <StoryContext.Provider value={{ ...state, dispatch, setProfile, startStory, makeChoice, resetStory }}>
+    <StoryContext.Provider value={{ ...state, dispatch, setProfile, startStory, makeChoice, resetStory, continueStory, clearError }}>
       {children}
     </StoryContext.Provider>
   );

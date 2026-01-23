@@ -1,4 +1,11 @@
 
+// Global volume for system sounds
+let sfxVolume = 0.5;
+
+export const setSfxVolume = (v: number) => {
+  sfxVolume = Math.max(0, Math.min(1, v));
+};
+
 export const getAudioContext = () => {
   return new (window.AudioContext || (window as any).webkitAudioContext)({
     sampleRate: 24000,
@@ -49,7 +56,7 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
 // We keep this simple singleton for UI clicks, separate from the Story Audio Engine
 let uiCtx: AudioContext | null = null;
 
-export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'error') => {
+export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'error' | 'page-turn') => {
   try {
     if (!uiCtx) {
       uiCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -62,13 +69,16 @@ export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'e
 
     osc.connect(gain);
     gain.connect(uiCtx.destination);
+    
+    // Apply global SFX volume
+    const vol = sfxVolume;
 
     switch (type) {
       case 'click':
         osc.frequency.setValueAtTime(800, now);
         osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
-        gain.gain.setValueAtTime(0.05, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        gain.gain.setValueAtTime(0.05 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001 * vol, now + 0.05);
         osc.start(now);
         osc.stop(now + 0.05);
         break;
@@ -76,7 +86,7 @@ export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'e
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(300, now);
         osc.frequency.linearRampToValueAtTime(600, now + 0.1);
-        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.setValueAtTime(0.05 * vol, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.1);
         osc.start(now);
         osc.stop(now + 0.1);
@@ -86,10 +96,44 @@ export const playSystemSound = (type: 'click' | 'pop' | 'magic' | 'success' | 'e
         osc.type = 'sine';
         osc.frequency.setValueAtTime(400, now);
         osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.setValueAtTime(0.05 * vol, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.3);
         osc.start(now);
         osc.stop(now + 0.3);
+        break;
+      case 'error':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+        gain.gain.setValueAtTime(0.05 * vol, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+        break;
+      case 'page-turn':
+        // Synthesize a paper shuffle sound using white noise
+        const bufferSize = uiCtx.sampleRate * 0.3;
+        const buffer = uiCtx.createBuffer(1, bufferSize, uiCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = uiCtx.createBufferSource();
+        noise.buffer = buffer;
+        
+        const noiseFilter = uiCtx.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.setValueAtTime(800, now);
+        noiseFilter.frequency.linearRampToValueAtTime(0, now + 0.3);
+        
+        noise.connect(noiseFilter);
+        noiseFilter.connect(gain);
+        
+        gain.gain.setValueAtTime(0.15 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001 * vol, now + 0.25);
+        
+        noise.start(now);
+        // Don't need to stop OSC as we used noise buffer source
         break;
     }
   } catch (e) {

@@ -36,6 +36,7 @@ export const generateNextStorySegment = async (
     imagePrompt: scriptData.imagePrompt,
     soundCue: scriptData.soundCue,
     ambientSound: scriptData.ambientSound,
+    sidekick: scriptData.sidekick, // Ensure sidekick data is propagated to the page object
     imageUrl, 
     ambientAudioData 
   };

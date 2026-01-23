@@ -25,9 +25,18 @@ const scriptSchema: Schema = {
       description: "Two distinct, engaging choices for the child"
     },
     soundCue: { type: Type.STRING, description: "Short text for a visual sound badge (e.g. 'Magical Sparkles')" },
-    ambientSound: { type: Type.STRING, description: "Description of the background ambient sound loop (e.g. 'Soft wind in the trees')" }
+    ambientSound: { type: Type.STRING, description: "Description of the background ambient sound loop (e.g. 'Soft wind in the trees')" },
+    sidekick: {
+      type: Type.OBJECT,
+      properties: {
+        name: { type: Type.STRING, description: "Name of the sidekick character" },
+        emoji: { type: Type.STRING, description: "A single emoji representing the sidekick" }
+      },
+      required: ['name', 'emoji'],
+      description: "Details about the theme-appropriate sidekick character"
+    }
   },
-  required: ['title', 'lines', 'imagePrompt', 'choices', 'ambientSound', 'soundCue']
+  required: ['title', 'lines', 'imagePrompt', 'choices', 'ambientSound', 'soundCue', 'sidekick']
 };
 
 export async function generateStoryScript(
@@ -78,7 +87,8 @@ export async function generateStoryScript(
       imagePrompt: `A magical pause in a ${profile.theme} world`,
       choices: ["Try Again"],
       soundCue: "Silence",
-      ambientSound: "Quiet reflection"
+      ambientSound: "Quiet reflection",
+      sidekick: { name: "Mystery Friend", emoji: "❓" }
     };
   }
 }

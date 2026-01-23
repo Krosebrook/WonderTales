@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useStory } from "../contexts/StoryContext";
 import { UserProfile, BookFormat } from "../types";
 import { THEME_PRESETS, AVATAR_OPTIONS, MIN_PAGES, MAX_PAGES } from "../config/constants";
 import { playSystemSound } from "../services/audioUtils";
@@ -12,13 +13,16 @@ interface SetupWizardProps {
 }
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
+  const { pages, continueStory } = useStory();
+  const hasSavedStory = pages && pages.length > 0;
+
   // Local State for Form
   const [name, setName] = useState("");
   const [age, setAge] = useState<number | null>(7);
   const [avatar, setAvatar] = useState(AVATAR_OPTIONS[1]); 
   const [themePresetId, setThemePresetId] = useState<string | null>(null);
   const [customTheme, setCustomTheme] = useState("");
-  const [pages, setPages] = useState(10);
+  const [pagesCount, setPagesCount] = useState(10);
   const [format, setFormat] = useState<BookFormat | null>("digital");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,8 +31,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
   const resolvedTheme = useMemo(() => customTheme.trim() || selectedThemePreset?.label || "", [customTheme, selectedThemePreset]);
   
   const isValid = useMemo(() => 
-    name.trim().length > 0 && resolvedTheme.length > 0 && format !== null && pages >= MIN_PAGES && pages <= MAX_PAGES, 
-  [name, resolvedTheme, format, pages]);
+    name.trim().length > 0 && resolvedTheme.length > 0 && format !== null && pagesCount >= MIN_PAGES && pagesCount <= MAX_PAGES, 
+  [name, resolvedTheme, format, pagesCount]);
 
   const currentStep = useMemo(() => {
     if (!name.trim()) return 1;
@@ -40,7 +44,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
     if (!isValid || !format) return;
     playSystemSound('success');
     setIsSubmitting(true);
-    // Slight delay to allow sound to play and animation to start
     await new Promise(r => setTimeout(r, 800));
     
     onGenerate({
@@ -53,15 +56,35 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
     });
   };
 
+  const handleContinue = () => {
+    playSystemSound('magic');
+    continueStory();
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 font-sans">
+    <div className="min-h-screen bg-slate-50 py-10 px-4 font-sans relative">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-2xl shadow-sm">✨</div>
-          <div><h1 className="text-lg font-bold text-indigo-900">WonderTales · Setup</h1></div>
+        <header className="mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-2xl shadow-sm">✨</div>
+            <div><h1 className="text-lg font-bold text-indigo-900">WonderTales · Setup</h1></div>
+          </div>
+          
+          {hasSavedStory && (
+            <button 
+              onClick={handleContinue}
+              className="group relative flex items-center gap-3 bg-white border-2 border-emerald-100 pr-6 pl-4 py-2 rounded-full shadow-sm hover:shadow-md hover:border-emerald-300 transition-all active:scale-95"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm group-hover:scale-110 transition-transform">📖</span>
+              <div className="text-left">
+                 <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Resume</div>
+                 <div className="text-sm font-bold text-slate-700">Continue Previous Story</div>
+              </div>
+            </button>
+          )}
         </header>
 
-        <main className="rounded-3xl bg-white shadow-xl shadow-slate-200/60 border border-slate-100">
+        <main className="rounded-3xl bg-white shadow-xl shadow-slate-200/60 border border-slate-100 relative overflow-hidden">
           <StepHeader currentStep={currentStep} />
           <div className="flex flex-col gap-6 border-t border-slate-100 p-6 lg:flex-row lg:p-8">
             <div className="flex-1 space-y-6">
@@ -72,7 +95,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onGenerate }) => {
                 <Step2Theme themePresetId={themePresetId} setThemePresetId={setThemePresetId} customTheme={customTheme} setCustomTheme={setCustomTheme} />
               </FormSection>
               <FormSection step={3} title="Story details" description="Format & Length" isCurrent={currentStep === 3}>
-                <Step3Details pages={pages} setPages={setPages} format={format} setFormat={setFormat} />
+                <Step3Details pages={pagesCount} setPages={setPagesCount} format={format} setFormat={setFormat} />
               </FormSection>
             </div>
             

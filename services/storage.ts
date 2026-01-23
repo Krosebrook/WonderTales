@@ -35,8 +35,10 @@ export class StorageService {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Recovery logic: If stuck in loading, reset to reading or setup
-        if (parsed.status === 'loading') {
+        // Recovery logic:
+        // 1. If stuck in loading, reset to reading or setup
+        // 2. If stuck in error (from previous save), reset to reading so user can retry
+        if (parsed.status === 'loading' || parsed.status === 'error') {
            parsed.status = parsed.pages.length > 0 ? 'reading' : 'setup';
         }
         return { ...INITIAL_STATE, ...parsed };

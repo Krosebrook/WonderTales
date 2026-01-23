@@ -5,7 +5,11 @@ import { StorageService, INITIAL_STATE } from "../services/storage";
 const storyReducer = (state: StoryState, action: StoryAction): StoryState => {
   switch (action.type) {
     case 'HYDRATE_STATE':
-      return { ...action.payload };
+      return { 
+        ...action.payload,
+        // Ensure we don't load into a stuck loading state
+        status: action.payload.status === 'loading' ? 'setup' : 'setup' 
+      };
     
     case 'SET_PROFILE':
       return { ...state, profile: action.payload };
@@ -23,10 +27,16 @@ const storyReducer = (state: StoryState, action: StoryAction): StoryState => {
     
     case 'SET_ERROR':
       return { ...state, status: 'error', error: action.payload };
+
+    case 'CLEAR_ERROR':
+      return { ...state, status: 'reading', error: undefined };
     
     case 'RESET_STORY':
       StorageService.clearState();
       return { ...INITIAL_STATE, status: 'setup' };
+
+    case 'CONTINUE_STORY':
+      return { ...state, status: 'reading', currentPageIndex: state.pages.length > 0 ? state.pages.length - 1 : 0 };
       
     default:
       return state;
@@ -36,7 +46,7 @@ const storyReducer = (state: StoryState, action: StoryAction): StoryState => {
 export const useStoryReducer = () => {
   const [state, dispatch] = useReducer(storyReducer, INITIAL_STATE);
 
-  // Persistence Middleware
+  // Persistence Middleware: Save state whenever it changes
   useEffect(() => {
     StorageService.saveState(state);
   }, [state]);

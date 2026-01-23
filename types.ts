@@ -7,6 +7,11 @@ export interface ScriptLine {
   text: string;
 }
 
+export interface SidekickData {
+  name: string;
+  emoji: string;
+}
+
 export interface ScriptResponse {
   title: string;
   lines: ScriptLine[];
@@ -14,6 +19,7 @@ export interface ScriptResponse {
   choices: string[];
   soundCue: string;
   ambientSound: string;
+  sidekick?: SidekickData;
 }
 
 export interface StoryPage extends ScriptResponse {
@@ -46,7 +52,9 @@ export type StoryAction =
   | { type: 'START_LOADING' }
   | { type: 'ADD_PAGE'; payload: StoryPage }
   | { type: 'SET_ERROR'; payload: string }
+  | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_STORY' }
+  | { type: 'CONTINUE_STORY' }
   | { type: 'HYDRATE_STATE'; payload: StoryState };
 
 // --- Context ---
@@ -56,6 +64,8 @@ export interface StoryContextType extends StoryState {
   startStory: () => Promise<void>;
   makeChoice: (choice: string, audioInput?: string) => Promise<void>;
   resetStory: () => void;
+  continueStory: () => void;
+  clearError: () => void;
   setProfile: (profile: UserProfile) => void;
 }
 
